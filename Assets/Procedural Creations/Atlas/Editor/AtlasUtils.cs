@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 public class AtlasUtils
 {
+    const string platform = "Standalone";
+
 	static public TextureImporter GetTextureImporter (string path)
 	{
 		if (!string.IsNullOrEmpty(path))
@@ -24,6 +26,7 @@ public class AtlasUtils
 	static public bool SetTextureReadable (string path, bool force)
 	{
 		TextureImporter ti = GetTextureImporter(path);
+        var settingsChanged = false;
 		if (ti != null)
 		{
 			TextureImporterSettings settings = new TextureImporterSettings();
@@ -32,23 +35,36 @@ public class AtlasUtils
 			if (force ||
 				settings.mipmapEnabled ||
 				!settings.readable ||
-				settings.maxTextureSize < 4096 ||
 				settings.filterMode != FilterMode.Point ||
 				settings.wrapMode != TextureWrapMode.Clamp ||
 				settings.npotScale != TextureImporterNPOTScale.None)
 			{
 				settings.mipmapEnabled = false;
 				settings.readable = true;
-				settings.maxTextureSize = 4096;
-				settings.textureFormat = TextureImporterFormat.ARGB32;
 				settings.filterMode = FilterMode.Point;
 				settings.wrapMode = TextureWrapMode.Clamp;
 				settings.npotScale = TextureImporterNPOTScale.None;
 				
 				ti.SetTextureSettings(settings);
-				AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-			}
-			return true;
+                settingsChanged = true;
+            }
+
+            var platformSettings = ti.GetPlatformTextureSettings(platform);
+            if (force ||
+                platformSettings.maxTextureSize < 4096)
+            {
+                platformSettings.maxTextureSize = 4096;
+                platformSettings.format = TextureImporterFormat.ARGB32;
+                ti.SetPlatformTextureSettings(platformSettings);
+                settingsChanged = true;
+            }
+
+            if (settingsChanged)
+            {
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
+
+            return true;
 		}
 		return false;
 	}
@@ -82,28 +98,39 @@ public class AtlasUtils
 			{
 				TextureImporterSettings settings = new TextureImporterSettings();
 				ti.ReadTextureSettings(settings);
-		
+                var settingsChanged = false;
 				if (force ||
 					settings.readable ||
-					settings.maxTextureSize < 4096 ||
 					settings.wrapMode != TextureWrapMode.Clamp ||
 					settings.npotScale != TextureImporterNPOTScale.ToNearest)
 				{
 					settings.mipmapEnabled = true;
 					settings.readable = false;
-					settings.maxTextureSize = 4096;
-					// high-precision color is required to prevent bleeding
-					settings.textureFormat = TextureImporterFormat.RGBA32;
-//					settings.textureFormat = TextureImporterFormat.DXT5;
 					settings.filterMode = FilterMode.Trilinear;
 					settings.aniso = 4;
 					settings.wrapMode = TextureWrapMode.Clamp;
 					settings.npotScale = TextureImporterNPOTScale.ToNearest;
 					
 					ti.SetTextureSettings(settings);
-					AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-				}
-				return true;
+                    settingsChanged = true;
+                }
+
+                var platformSettings = ti.GetPlatformTextureSettings(platform);
+                if (force ||
+                    platformSettings.maxTextureSize < 4096)
+                {
+                    platformSettings.maxTextureSize = 4096;
+                    platformSettings.format = TextureImporterFormat.ARGB32;
+                    ti.SetPlatformTextureSettings(platformSettings);
+                    settingsChanged = true;
+                }
+
+                if (settingsChanged)
+                {
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                }
+
+                return true;
 			}
 		}
 		return false;
